@@ -1,0 +1,401 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Heart, X, Loader2, ArrowLeft, AlertCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
+import Link from 'next/link'
+
+interface Stylist {
+  id: string
+  name: string
+  bio: string
+  specialties: string[]
+  catalog_urls: string[]
+}
+
+export default function SwipePage() {
+  const { user, session } = useAuth()
+  const [stylists, setStylists] = useState<Stylist[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [swiping, setSwiping] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (user) {
+      fetchAvailableStylists()
+    }
+  }, [user])
+
+  const fetchAvailableStylists = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      setCurrentIndex(0)
+
+      console.log('Fetching available stylists for user:', user?.id)
+      console.log('User object:', user)
+
+      // First, get all stylists
+      const { data: allStylists, error: stylistsError } = await supabase
+        .from('stylists')
+        .select('*')
+        .order('id')
+
+      if (stylistsError) {
+        console.error('Error fetching all stylists:', stylistsError)
+        setError(`Failed to load stylists: ${stylistsError.message}`)
+        return
+      }
+
+      console.log('All stylists fetched:', allStylists?.length || 0)
+      console.log('Stylists data:', allStylists)
+
+      // Get user's swipes
+      const { data: userSwipes, error: swipesError } = await supabase
+        .from('swipes')
+        .select('stylist_id')
+        .eq('user_id', user?.id)
+
+      if (swipesError) {
+        console.error('Error fetching swipes:', swipesError)
+        setError(`Failed to load swipes: ${swipesError.message}`)
+        return
+      }
+
+      console.log('User swipes:', userSwipes)
+
+      // Get user's matches
+      const { data: userMatches, error: matchesError } = await supabase
+        .from('matches')
+        .select('stylist_id')
+        .eq('user_id', user?.id)
+
+      if (matchesError) {
+        console.error('Error fetching matches:', matchesError)
+        setError(`Failed to load matches: ${matchesError.message}`)
+        return
+      }
+
+      console.log('User matches:', userMatches)
+
+      // Create sets for efficient lookup
+      const swipedStylistIds = new Set(userSwipes?.map(swipe => swipe.stylist_id) || [])
+      const matchedStylistIds = new Set(userMatches?.map(match => match.stylist_id) || [])
+
+      console.log('Swiped stylist IDs:', Array.from(swipedStylistIds))
+      console.log('Matched stylist IDs:', Array.from(matchedStylistIds))
+
+      // Filter out swiped and matched stylists
+      const availableStylists = allStylists?.filter(stylist => 
+        !swipedStylistIds.has(stylist.id) && !matchedStylistIds.has(stylist.id)
+      ) || []
+
+      console.log(`Found ${allStylists?.length || 0} total stylists, ${availableStylists.length} available after filtering`)
+      console.log('Available stylists:', availableStylists)
+      setStylists(availableStylists)
+    } catch (error) {
+      console.error('Error fetching stylists:', error)
+      setError(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSwipe = async (direction: 'left' | 'right') => {
+    if (!user || swiping || currentIndex >= stylists.length) {
+      return
+    }
+
+    setSwiping(true)
+    const currentStylist = stylists[currentIndex]
+
+    try {
+      console.log(`Processing ${direction} swipe for stylist:`, currentStylist.name)
+
+      // Insert swipe record
+      const { error: swipeError } = await supabase
+        .from('swipes')
+        .insert({
+          user_id: user.id,
+          stylist_id: currentStylist.id,
+          direction
+        })
+
+      if (swipeError) {
+        console.error('Swipe error:', swipeError)
+        throw new Error(`Failed to record swipe: ${swipeError.message}`)
+      }
+
+      // If it's a like (right swipe), create a match
+      if (direction === 'right') {
+        const { error: matchError } = await supabase
+          .from('matches')
+          .insert({
+            user_id: user.id,
+            stylist_id: currentStylist.id,
+            matched_at: new Date().toISOString()
+          })
+
+        if (matchError) {
+          console.error('Match error:', matchError)
+          throw new Error(`Failed to create match: ${matchError.message}`)
+        }
+
+        console.log('Match created successfully!')
+      }
+
+      // Move to next stylist
+      setCurrentIndex(prev => prev + 1)
+      console.log('Moved to next stylist')
+    } catch (error) {
+      console.error('Error processing swipe:', error)
+      setError(error instanceof Error ? error.message : 'Failed to process swipe')
+    } finally {
+      setSwiping(false)
+    }
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          <span className="text-lg text-gray-700">Loading stylists...</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={fetchAvailableStylists}
+            className="bg-purple-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-purple-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Authentication required
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Please sign in to swipe</h1>
+          <p className="text-gray-600 mb-6">You need to be logged in to use this feature.</p>
+          <Link
+            href="/"
+            className="bg-purple-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-purple-700 transition-colors"
+          >
+            Go to Home
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // No more stylists
+  if (currentIndex >= stylists.length) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-4">
+          <Heart className="w-16 h-16 text-pink-500 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">No more stylists!</h1>
+          <p className="text-gray-600 mb-6">
+            {stylists.length === 0 
+              ? "You've matched with all available stylists!" 
+              : "You've seen all available stylists."
+            }
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={fetchAvailableStylists}
+              className="bg-purple-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-purple-700 transition-colors"
+            >
+              Start Over
+            </button>
+            <Link
+              href="/matches"
+              className="bg-pink-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-pink-700 transition-colors"
+            >
+              View Matches
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const currentStylist = stylists[currentIndex]
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
+      {/* Back to Landing Page Button */}
+      <div className="fixed top-6 left-6 z-20">
+        <Link
+          href="/"
+          className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-white text-gray-700 hover:text-gray-900"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="font-medium">Back to Home</span>
+        </Link>
+      </div>
+      
+      <div className="max-w-md mx-auto pt-8">
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-8">
+          Find Your Stylist
+        </h1>
+
+        {/* Stylist Card with Animation */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStylist.id}
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: -20 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="bg-white rounded-3xl shadow-xl overflow-hidden mb-6"
+          >
+            {/* Image */}
+            <div className="relative h-96 bg-gradient-to-br from-purple-100 to-pink-100">
+              {currentStylist.catalog_urls && currentStylist.catalog_urls.length > 0 ? (
+                <img
+                  src={currentStylist.catalog_urls[0]}
+                  alt={currentStylist.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center text-gray-400">
+                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-2"></div>
+                    <p>No image available</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                {currentStylist.name}
+              </h2>
+              
+              <p className="text-gray-600 mb-4 leading-relaxed">
+                {currentStylist.bio}
+              </p>
+
+              {/* Specialties */}
+              {currentStylist.specialties && currentStylist.specialties.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Specialties</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {currentStylist.specialties.map((specialty, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full font-medium"
+                      >
+                        {specialty}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Action Buttons */}
+        <div className="flex justify-center space-x-6 mb-6">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleSwipe('left')}
+            disabled={swiping}
+            className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-200 disabled:opacity-50 cursor-pointer border-2 border-red-200 hover:border-red-400"
+          >
+            <X className="w-8 h-8 text-red-500" />
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleSwipe('right')}
+            disabled={swiping}
+            className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-200 disabled:opacity-50 cursor-pointer border-2 border-pink-200 hover:border-pink-400"
+          >
+            <Heart className="w-8 h-8 text-pink-500" />
+          </motion.button>
+        </div>
+
+        {/* Progress Indicator */}
+        <div className="flex justify-center">
+          <div className="flex space-x-1">
+            {stylists.map((_, index) => (
+              <div
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                  index === currentIndex
+                    ? 'bg-purple-600'
+                    : index < currentIndex
+                    ? 'bg-gray-300'
+                    : 'bg-gray-200'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Debug Info (remove in production) */}
+        <div className="text-center mt-4 text-xs text-gray-500">
+          <p>Stylists available: {stylists.length}</p>
+          <p>Current index: {currentIndex}</p>
+          <p>User ID: {user?.id}</p>
+          <p>User authenticated: {user ? 'Yes' : 'No'}</p>
+          <p>Loading state: {loading ? 'Yes' : 'No'}</p>
+          <p>Error state: {error ? 'Yes' : 'No'}</p>
+          {error && <p className="text-red-500">Error: {error}</p>}
+          {stylists.length > 0 && (
+            <div className="mt-2 p-2 bg-gray-100 rounded">
+              <p className="font-semibold">Current stylist:</p>
+              <p>Name: {stylists[currentIndex]?.name}</p>
+              <p>ID: {stylists[currentIndex]?.id}</p>
+            </div>
+          )}
+          
+          {/* Additional debug info */}
+          <div className="mt-4 p-3 bg-blue-50 rounded text-left">
+            <h4 className="font-semibold mb-2">Debug Information:</h4>
+            <p><strong>Environment:</strong> {process.env.NODE_ENV}</p>
+            <p><strong>Supabase URL:</strong> {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing'}</p>
+            <p><strong>Supabase Key:</strong> {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'}</p>
+            <p><strong>User Email:</strong> {user?.email || 'Not signed in'}</p>
+            <p><strong>User Created:</strong> {user?.created_at || 'N/A'}</p>
+            <p><strong>Session:</strong> {session ? 'Active' : 'None'}</p>
+            
+            <div className="mt-3">
+              <button
+                onClick={fetchAvailableStylists}
+                className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+              >
+                Refresh Stylists
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+} 
