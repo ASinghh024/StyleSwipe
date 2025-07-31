@@ -48,13 +48,7 @@ export default function Hero() {
         
         <div className="relative z-10 max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
           <div className="max-w-4xl mx-auto space-y-12">
-            {/* Minimal badge */}
-            <div className="inline-flex items-center space-x-2 bg-dark-surface/60 backdrop-blur-apple px-4 py-2 rounded-2xl border border-dark-border/50">
-              <Shirt className="h-3 w-3 text-dark-text-tertiary" />
-              <span className="text-sm font-medium text-dark-text-secondary">
-                {isStylist ? 'Stylist Dashboard' : 'Fashion Connections'}
-              </span>
-            </div>
+            {/* Badge removed as requested */}
 
             {/* Clean, minimal headline */}
             {isStylist ? (

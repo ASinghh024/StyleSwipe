@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Shirt, User, LogOut, Heart, Users, LayoutDashboard, Briefcase } from 'lucide-react'
+import { Shirt, User, LogOut, Heart, Users, LayoutDashboard, Briefcase, Camera } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import LoginModal from './auth/LoginModal'
 import SignUpModal from './auth/SignUpModal'
@@ -51,14 +51,31 @@ export default function Navbar() {
               {user ? (
                 <div className="flex items-center space-x-2">
                   {/* Role-based navigation */}
-                  {userProfile?.role === 'stylist' ? (
+                  {userProfile?.role === 'admin' as any ? (
                     <Link
-                      href="/stylist-dashboard"
+                      href="/admin/dashboard"
                       className="apple-button-secondary flex items-center space-x-2 text-sm"
                     >
                       <LayoutDashboard className="h-4 w-4" />
-                      <span>Dashboard</span>
+                      <span>Admin Dashboard</span>
                     </Link>
+                  ) : userProfile?.role === 'stylist' ? (
+                    <>
+                      <Link
+                        href="/stylist-dashboard"
+                        className="apple-button-secondary flex items-center space-x-2 text-sm"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                      <Link
+                        href={`/stylist/${user?.id}`}
+                        className="apple-button-secondary flex items-center space-x-2 text-sm"
+                      >
+                        <Camera className="h-4 w-4" />
+                        <span>Your Catalog</span>
+                      </Link>
+                    </>
                   ) : (
                     <>
                       <Link
@@ -100,6 +117,9 @@ export default function Navbar() {
                         </div>
                         {userProfile?.role === 'stylist' && (
                           <div className="text-xs text-accent-blue">Stylist</div>
+                        )}
+                        {userProfile?.role === 'admin' as any && (
+                          <div className="text-xs text-system-red">Admin</div>
                         )}
                       </div>
                     </button>

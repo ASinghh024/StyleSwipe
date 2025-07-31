@@ -40,7 +40,7 @@ export function useCatalogImages(): UseCatalogImagesReturn {
         .from('catalog_images')
         .select('*')
         .eq('stylist_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
 
       if (fetchError) {
         throw fetchError
@@ -188,4 +188,4 @@ export function useCatalogImages(): UseCatalogImagesReturn {
     deleteImage,
     refreshImages
   }
-} 
+}

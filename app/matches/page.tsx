@@ -145,7 +145,7 @@ export default function MatchesPage() {
               .from('catalog_images')
               .select('*')
               .eq('stylist_id', match.stylist.id)
-              .order('created_at', { ascending: false })
+              .order('created_at', { ascending: true })
 
             if (imagesError) {
               console.error('Error fetching catalog images for stylist:', match.stylist.id, imagesError)
@@ -322,7 +322,12 @@ export default function MatchesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="apple-card overflow-hidden hover:shadow-apple-lg transition-all"
+                className={`apple-card overflow-hidden hover:shadow-apple-lg transition-all ${!isStylist ? 'cursor-pointer hover:scale-[1.02] hover:border-accent-blue/30' : ''}`}
+                onClick={() => {
+                  if (!isStylist) {
+                    window.location.href = `/stylist/${match.stylist_id}`;
+                  }
+                }}
               >
                 {/* Image */}
                 <div className="relative h-48 bg-dark-card">
@@ -469,8 +474,8 @@ export default function MatchesPage() {
                     </span>
                   </div>
 
-                  {/* Action Button */}  
-                  <div className="mt-4">
+                  {/* Action Buttons */}  
+                  <div className="mt-4 space-y-2">
                     {isStylist ? (
                       <button 
                         onClick={() => openChat(
@@ -485,18 +490,23 @@ export default function MatchesPage() {
                         <span>Contact Client</span>
                       </button>
                     ) : (
-                      <button 
-                        onClick={() => openChat(
-                          match.id,
-                          match.stylist_id,
-                          match.stylist?.name || 'Stylist',
-                          'stylist'
-                        )}
-                        className="apple-button-primary w-full flex items-center justify-center space-x-2 text-sm"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        <span>Contact Stylist</span>
-                      </button>
+                      <>
+                        <button 
+                          onClick={() => openChat(
+                            match.id,
+                            match.stylist_id,
+                            match.stylist?.name || 'Stylist',
+                            'stylist'
+                          )}
+                          className="apple-button-primary w-full flex items-center justify-center space-x-2 text-sm"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Contact Stylist</span>
+                        </button>
+                        <div className="text-center text-xs text-dark-text-tertiary">
+                          Click on card to view stylist catalog
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -517,4 +527,4 @@ export default function MatchesPage() {
       />
     </div>
   )
-} 
+}

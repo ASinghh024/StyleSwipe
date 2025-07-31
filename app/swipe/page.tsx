@@ -79,7 +79,7 @@ export default function SwipePage() {
             .from('catalog_images')
             .select('*')
             .eq('stylist_id', stylist.id)
-            .order('created_at', { ascending: false })
+            .order('created_at', { ascending: true })
 
           if (imagesError) {
             console.error('Error fetching catalog images for stylist:', stylist.id, imagesError)
@@ -673,6 +673,11 @@ export default function SwipePage() {
             onDragStart={handleDragStart}
             onDrag={handleDrag}
             onDragEnd={handleDragEnd}
+            onClick={() => {
+              if (!isDragging) {
+                window.location.href = `/stylist/${currentStylist.id}`;
+              }
+            }}
             className={`apple-card rounded-3xl overflow-hidden mb-8 cursor-grab active:cursor-grabbing transition-all duration-200 ${
               isDragging 
                 ? dragDirection === 'right'
@@ -768,15 +773,21 @@ export default function SwipePage() {
                   animate={{ opacity: 0.9 }}
                   className="absolute bottom-4 left-4 right-4 bg-dark-surface/80 backdrop-blur-apple text-dark-text-secondary text-center py-3 rounded-xl border border-dark-border/50"
                 >
-                  <div className="flex items-center justify-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <X className="w-3 h-3 text-system-red" />
-                      <span className="text-xs font-medium">Swipe left to pass</span>
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <div className="flex items-center justify-center space-x-4">
+                      <div className="flex items-center space-x-1">
+                        <X className="w-3 h-3 text-system-red" />
+                        <span className="text-xs font-medium">Swipe left to pass</span>
+                      </div>
+                      <div className="h-3 w-px bg-dark-border"></div>
+                      <div className="flex items-center space-x-1">
+                        <Heart className="w-3 h-3 text-accent-green" />
+                        <span className="text-xs font-medium">Swipe right to like</span>
+                      </div>
                     </div>
-                    <div className="h-3 w-px bg-dark-border"></div>
-                    <div className="flex items-center space-x-1">
-                      <Heart className="w-3 h-3 text-accent-green" />
-                      <span className="text-xs font-medium">Swipe right to like</span>
+                    <div className="flex items-center space-x-1 mt-1">
+                      <MessageCircle className="w-3 h-3 text-accent-blue" />
+                      <span className="text-xs font-medium">Tap card to view profile</span>
                     </div>
                   </div>
                 </motion.div>
