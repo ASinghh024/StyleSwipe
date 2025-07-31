@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { ArrowLeft, Users, Heart, TrendUp, Upload, Calendar, Palette } from 'lucide-react'
+import { ArrowLeft, Users, Heart, TrendingUp, Upload, Calendar, Palette } from 'lucide-react'
 
 interface DashboardMetrics {
   totalUsers: number
