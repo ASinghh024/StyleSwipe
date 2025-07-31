@@ -87,13 +87,6 @@ export default function Hero() {
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
                   </button>
-                  <button 
-                    onClick={() => router.push('/matches')}
-                    className="apple-button-secondary flex items-center space-x-2"
-                  >
-                    <Heart className="h-4 w-4" />
-                    <span>Matches</span>
-                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-4">

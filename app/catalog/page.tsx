@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { Camera, Search, Loader2, X } from 'lucide-react'
+import { Camera, Search, Loader2, X, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
+import ChatModal from '../components/ChatModal'
 
 interface Stylist {
   id: string
@@ -12,6 +13,7 @@ interface Stylist {
   bio?: string
   specialties?: string[]
   catalog_urls?: string[]
+  profile_picture?: string
   catalog_images?: Array<{
     id: string
     stylist_id: string
@@ -25,15 +27,32 @@ interface Stylist {
 }
 
 export default function CatalogPage() {
-  const { user } = useAuth()
+  const { user, userProfile } = useAuth()
   const [stylists, setStylists] = useState<Stylist[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [matchedStylists, setMatchedStylists] = useState<string[]>([])
+  const [chatModal, setChatModal] = useState<{
+    isOpen: boolean
+    matchId: string
+    otherUserId: string
+    otherUserName: string
+    otherUserRole: 'user' | 'stylist'
+  }>({
+    isOpen: false,
+    matchId: '',
+    otherUserId: '',
+    otherUserName: '',
+    otherUserRole: 'stylist'
+  })
 
   useEffect(() => {
     fetchStylists()
-  }, [])
+    if (user) {
+      fetchMatchedStylists()
+    }
+  }, [user])
 
   const fetchStylists = async () => {
     try {
@@ -75,6 +94,40 @@ export default function CatalogPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchMatchedStylists = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('matches')
+        .select('stylist_id, id')
+        .eq('user_id', user.id)
+      
+      if (error) {
+        console.error('Error fetching matched stylists:', error)
+        return
+      }
+      
+      setMatchedStylists(data.map(match => match.stylist_id))
+    } catch (err) {
+      console.error('Error checking match status:', err)
+    }
+  }
+
+  const openChat = (matchId: string, stylistId: string, stylistName: string) => {
+    setChatModal({
+      isOpen: true,
+      matchId,
+      otherUserId: stylistId,
+      otherUserName: stylistName,
+      otherUserRole: 'stylist'
+    })
+  }
+
+  const closeChatModal = () => {
+    setChatModal(prev => ({ ...prev, isOpen: false }))
   }
 
   const filteredStylists = stylists.filter(stylist => 
@@ -158,20 +211,16 @@ export default function CatalogPage() {
             {filteredStylists.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredStylists.map((stylist) => {
-                  const hasCatalogImages = stylist?.catalog_images && stylist.catalog_images.length > 0
-                  const hasCatalogUrls = stylist?.catalog_urls && stylist.catalog_urls.length > 0
+                  const hasCatalogImages = stylist?.catalog_images && stylist?.catalog_images.length > 0
+                  const hasCatalogUrls = stylist?.catalog_urls && stylist?.catalog_urls.length > 0
                   const featuredImage = hasCatalogImages 
-                    ? stylist.catalog_images[0].image_url 
+                    ? stylist?.catalog_images?.[0]?.image_url 
                     : hasCatalogUrls 
-                      ? stylist.catalog_urls[0] 
+                      ? stylist?.catalog_urls?.[0] 
                       : null
 
                   return (
-                    <Link
-                      key={stylist.id}
-                      href={`/stylist/${stylist.id}`}
-                      className="block group"
-                    >
+                    <div key={stylist.id} className="block group">
                       <div className="apple-card overflow-hidden transition-all duration-300 group-hover:shadow-apple-lg">
                         {/* Featured Image */}
                         <div className="aspect-square bg-dark-card relative overflow-hidden">
@@ -196,17 +245,19 @@ export default function CatalogPage() {
                           {(hasCatalogImages || hasCatalogUrls) && (
                             <div className="absolute bottom-3 right-3 bg-dark-surface/80 backdrop-blur-apple px-3 py-1 rounded-full text-xs font-medium text-dark-text-secondary border border-dark-border/50">
                               {hasCatalogImages 
-                                ? `${stylist.catalog_images?.length || 0} images` 
-                                : `${stylist.catalog_urls?.length || 0} images`}
+                                ? `${stylist?.catalog_images?.length || 0} images` 
+                                : `${stylist?.catalog_urls?.length || 0} images`}
                             </div>
                           )}
                         </div>
                         
                         {/* Stylist Info */}
                         <div className="p-5">
-                          <h3 className="text-lg font-semibold text-dark-text-primary group-hover:text-accent-blue transition-colors">
-                            {stylist.name}
-                          </h3>
+                          <Link href={`/stylist/${stylist.id}`}>
+                            <h3 className="text-lg font-semibold text-dark-text-primary group-hover:text-accent-blue transition-colors">
+                              {stylist.name}
+                            </h3>
+                          </Link>
                           
                           {stylist.specialties && stylist.specialties.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-3">
@@ -223,9 +274,43 @@ export default function CatalogPage() {
                               )}
                             </div>
                           )}
+                          
+                          <div className="mt-4 flex space-x-2">
+                            <Link 
+                              href={`/stylist/${stylist.id}`}
+                              className="apple-button-secondary flex-1 text-center text-sm py-2"
+                            >
+                              View Profile
+                            </Link>
+                            
+                            {user && matchedStylists.includes(stylist.id) && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  // Find the match ID
+                                  const matchId = supabase
+                                    .from('matches')
+                                    .select('id')
+                                    .eq('user_id', user.id)
+                                    .eq('stylist_id', stylist.id)
+                                    .single()
+                                    .then(({ data }) => {
+                                      if (data) {
+                                        openChat(data.id, stylist.id, stylist.name)
+                                      }
+                                    })
+                                }}
+                                className="apple-button-primary flex items-center justify-center space-x-1 px-3 py-2"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                                <span className="text-sm">Chat</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   )
                 })}
               </div>
@@ -255,6 +340,18 @@ export default function CatalogPage() {
           </>
         )}
       </div>
+
+      {/* Chat Modal */}
+      {chatModal.isOpen && (
+        <ChatModal
+          isOpen={chatModal.isOpen}
+          onClose={closeChatModal}
+          matchId={chatModal.matchId}
+          otherUserId={chatModal.otherUserId}
+          otherUserName={chatModal.otherUserName}
+          otherUserRole={chatModal.otherUserRole}
+        />
+      )}
     </div>
   )
 }

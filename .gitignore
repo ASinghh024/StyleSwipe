@@ -40,3 +40,5 @@ coverage/
 
 # Supabase
 .supabase/
+# Local Netlify folder
+.netlify

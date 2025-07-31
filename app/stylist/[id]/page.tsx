@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { User, Camera, Heart, X, Loader2, Shirt, ChevronLeft, ChevronRight } from 'lucide-react'
+import { User, Camera, Heart, X, Loader2, Shirt, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
+import ChatModal from '@/app/components/ChatModal'
 
 interface Stylist {
   id: string
@@ -13,6 +14,7 @@ interface Stylist {
   bio?: string
   specialties?: string[]
   catalog_urls?: string[]
+  profile_picture?: string
   catalog_images?: Array<{
     id: string
     stylist_id: string
@@ -44,6 +46,8 @@ export default function StylistCatalogPage() {
   const [matchLoading, setMatchLoading] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0)
+  const [chatModalOpen, setChatModalOpen] = useState(false)
+  const [matchId, setMatchId] = useState<string | null>(null)
 
   useEffect(() => {
     if (stylistId) {
@@ -105,7 +109,12 @@ export default function StylistCatalogPage() {
         throw error
       }
 
-      setIsMatched(data && data.length > 0)
+      const matched = data && data.length > 0
+      setIsMatched(matched)
+      
+      if (matched && data && data[0]) {
+        setMatchId(data[0].id)
+      }
     } catch (err) {
       console.error('Error checking match status:', err)
     }
@@ -220,8 +229,16 @@ export default function StylistCatalogPage() {
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-12">
           {/* Avatar */}
-          <div className="w-24 h-24 bg-dark-card rounded-full flex items-center justify-center border border-dark-border">
-            <User className="w-12 h-12 text-dark-text-tertiary" />
+          <div className="w-24 h-24 bg-dark-card rounded-full flex items-center justify-center border border-dark-border overflow-hidden">
+            {stylist.profile_picture ? (
+              <img 
+                src={stylist.profile_picture} 
+                alt={`${stylist.name}'s profile`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-12 h-12 text-dark-text-tertiary" />
+            )}
           </div>
           
           {/* Info */}
@@ -270,9 +287,18 @@ export default function StylistCatalogPage() {
               )}
             </button>
           ) : isMatched && user?.id !== stylistId ? (
-            <div className="bg-accent-green/10 text-accent-green px-4 py-2 rounded-xl flex items-center space-x-2">
-              <Heart className="w-4 h-4 fill-accent-green" />
-              <span>Matched</span>
+            <div className="flex items-center space-x-3">
+              <div className="bg-accent-green/10 text-accent-green px-4 py-2 rounded-xl flex items-center space-x-2">
+                <Heart className="w-4 h-4 fill-accent-green" />
+                <span>Matched</span>
+              </div>
+              <button
+                onClick={() => setChatModalOpen(true)}
+                className="apple-button-secondary flex items-center space-x-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Chat with Stylist</span>
+              </button>
             </div>
           ) : null}
         </div>
@@ -431,6 +457,18 @@ export default function StylistCatalogPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chat Modal */}
+      {isMatched && matchId && (
+        <ChatModal
+          isOpen={chatModalOpen}
+          onClose={() => setChatModalOpen(false)}
+          matchId={matchId}
+          otherUserId={stylistId}
+          otherUserName={stylist.name}
+          otherUserRole="stylist"
+        />
       )}
     </div>
   )

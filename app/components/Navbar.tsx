@@ -1,17 +1,91 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Shirt, User, LogOut, Heart, Users, LayoutDashboard, Briefcase, Camera } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import LoginModal from './auth/LoginModal'
 import SignUpModal from './auth/SignUpModal'
 import StylistProfileModal from './auth/StylistProfileModal'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
+
+// Component to fetch and display stylist profile picture
+const ProfilePicture = ({ userId }: { userId: string }) => {
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  
+  useEffect(() => {
+    let isMounted = true
+    
+    const fetchProfilePicture = async () => {
+      if (!userId) {
+        console.log('ProfilePicture: No userId provided')
+        return
+      }
+      
+      console.log('ProfilePicture: Fetching for userId:', userId)
+      
+      try {
+        setIsLoading(true)
+        const { data, error } = await supabase
+          .from('stylists')
+          .select('profile_picture')
+          .eq('id', userId)
+          .single()
+        
+        if (error) {
+          console.error('Error fetching profile picture:', error)
+          return
+        }
+        
+        console.log('ProfilePicture: Fetched data:', data)
+        
+        if (isMounted) {
+          setProfilePicture(data?.profile_picture || null)
+        }
+      } catch (error) {
+        console.error('Error in profile picture fetch:', error)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+    
+    fetchProfilePicture()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [userId])
+  
+  if (isLoading) {
+    return <User className="h-4 w-4 text-dark-text-secondary" />
+  }
+  
+  if (profilePicture) {
+    console.log('ProfilePicture: Rendering image with src:', profilePicture)
+    return <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+  }
+  
+  console.log('ProfilePicture: No profile picture found, rendering default icon')
+  return <User className="h-4 w-4 text-dark-text-secondary" />
+}
 
 export default function Navbar() {
   const { user, userProfile, signOut } = useAuth()
   const [showLogin, setShowLogin] = useState(false)
   const [showSignUp, setShowSignUp] = useState(false)
   const [showStylistProfile, setShowStylistProfile] = useState(false)
+  
+  useEffect(() => {
+    console.log('Navbar auth state:', { 
+      userId: user?.id, 
+      userEmail: user?.email,
+      userProfileId: userProfile?.id,
+      userProfileRole: userProfile?.role,
+      isStylist: userProfile?.role === 'stylist'
+    })
+  }, [user, userProfile])
 
   console.log('Navbar render - showLogin:', showLogin, 'showSignUp:', showSignUp, 'user:', user?.email, 'role:', userProfile?.role)
 
@@ -108,8 +182,12 @@ export default function Navbar() {
                       onClick={handleProfileClick}
                       className="flex items-center space-x-2 hover:bg-dark-card/50 p-2 rounded-xl transition-colors"
                     >
-                      <div className="w-7 h-7 bg-dark-card rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-dark-text-secondary" />
+                      <div className="w-7 h-7 bg-dark-card rounded-full flex items-center justify-center overflow-hidden">
+                        {userProfile?.role === 'stylist' && user?.id ? (
+                          <ProfilePicture userId={user.id} />
+                        ) : (
+                          <User className="h-4 w-4 text-dark-text-secondary" />
+                        )}
                       </div>
                       <div className="text-left">
                         <div className="text-sm font-medium text-dark-text-primary">

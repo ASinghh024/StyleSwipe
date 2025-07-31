@@ -82,8 +82,12 @@ export function useCatalogImages(): UseCatalogImagesReturn {
       setLoading(true)
       setError(null)
 
+      // Sanitize file name to prevent 'Invalid key' error
+      // Remove special characters and spaces from the file name
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      
       // Upload to Supabase Storage
-      const fileName = `${user.id}/${Date.now()}-${file.name}`
+      const fileName = `${user.id}/${Date.now()}-${sanitizedFileName}`
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('catalog-images')
         .upload(fileName, file, {

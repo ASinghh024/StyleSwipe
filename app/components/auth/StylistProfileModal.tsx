@@ -1,9 +1,10 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { X, User, Camera, Plus, Trash2, Save } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { X, User, Camera, Plus, Trash2, Save, Upload } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import CatalogImages from '../CatalogImages'
+import { useToast } from '@/contexts/ToastContext'
 
 interface StylistProfileModalProps {
   isOpen: boolean
@@ -24,6 +25,10 @@ export default function StylistProfileModal({ isOpen, onClose }: StylistProfileM
   const [catalogUrls, setCatalogUrls] = useState<string[]>([''])
   const [newSpecialty, setNewSpecialty] = useState('')
   const [newCatalogUrl, setNewCatalogUrl] = useState('')
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [uploadingProfilePic, setUploadingProfilePic] = useState(false)
+  const profilePicInputRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useToast()
 
   // Load existing data if stylist already exists
   useEffect(() => {
@@ -31,6 +36,64 @@ export default function StylistProfileModal({ isOpen, onClose }: StylistProfileM
       loadExistingStylistData()
     }
   }, [isOpen, user])
+  
+  // Handle profile picture upload
+  const handleProfilePicUpload = async (file: File) => {
+    if (!user) return
+    
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File size must be less than 5MB', 'error')
+      return
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showToast('File must be an image', 'error')
+      return
+    }
+    
+    try {
+      setUploadingProfilePic(true)
+      setError('')
+      
+      // Sanitize file name to prevent 'Invalid key' error
+      // Remove special characters and spaces from the file name
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      
+      // Upload to Supabase Storage - use the same structure as catalog images
+      // Direct user.id as first folder instead of profile/user.id
+      const fileName = `${user.id}/${Date.now()}-${sanitizedFileName}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('catalog-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('catalog-images')
+        .getPublicUrl(fileName)
+
+      setProfilePicture(urlData.publicUrl)
+      showToast('Profile picture uploaded successfully!', 'success')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to upload profile picture', 'error')
+    } finally {
+      setUploadingProfilePic(false)
+    }
+  }
+  
+  const handleProfilePicSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleProfilePicUpload(e.target.files[0])
+    }
+  }
 
   const loadExistingStylistData = async () => {
     try {
@@ -50,12 +113,14 @@ export default function StylistProfileModal({ isOpen, onClose }: StylistProfileM
         setBio(existingStylist.bio || '')
         setSpecialties(existingStylist.specialties || [''])
         setCatalogUrls(existingStylist.catalog_urls || [''])
+        setProfilePicture(existingStylist.profile_picture || null)
       } else {
         // Set default values for new stylist
         setName(userProfile?.full_name || '')
         setBio(`Professional stylist ${userProfile?.full_name || 'Stylist'} ready to help you look your best!`)
         setSpecialties(['Personal Styling', 'Fashion Consultation'])
         setCatalogUrls([])
+        setProfilePicture(null)
       }
     } catch (error) {
       console.error('Error loading stylist data:', error)
@@ -203,7 +268,8 @@ export default function StylistProfileModal({ isOpen, onClose }: StylistProfileM
         name: name.trim(),
         bio: bio.trim(),
         specialties: filteredSpecialties,
-        catalog_urls: filteredCatalogUrls
+        catalog_urls: filteredCatalogUrls,
+        profile_picture: profilePicture
       }
 
       console.log('2. Stylist data to save:', stylistData)
@@ -377,6 +443,52 @@ export default function StylistProfileModal({ isOpen, onClose }: StylistProfileM
           <>
             {activeTab === 'profile' && (
               <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Profile Picture */}
+            <div>
+              <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                Profile Picture
+              </label>
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-dark-card flex items-center justify-center border border-dark-border">
+                    {profilePicture ? (
+                      <img 
+                        src={profilePicture} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-12 w-12 text-dark-text-tertiary" />
+                    )}
+                  </div>
+                  <input
+                    ref={profilePicInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePicSelect}
+                    className="hidden"
+                  />
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => profilePicInputRef.current?.click()}
+                    disabled={uploadingProfilePic}
+                    className="apple-button-secondary inline-flex items-center text-sm disabled:opacity-50 disabled:cursor-not-allowed mb-2"
+                  >
+                    <Upload className="h-3 w-3 mr-1" />
+                    {profilePicture ? 'Change Picture' : 'Upload Picture'}
+                  </button>
+                  {uploadingProfilePic && (
+                    <div className="text-xs text-accent-blue">Uploading...</div>
+                  )}
+                  <div className="text-xs text-dark-text-tertiary">
+                    Maximum 5MB • JPG, PNG, GIF supported
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-dark-text-secondary mb-2">

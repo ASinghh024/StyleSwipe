@@ -13,6 +13,7 @@ interface Stylist {
   bio: string
   specialties: string[]
   catalog_urls: string[]
+  profile_picture?: string
   catalog_images?: Array<{
     id: string
     stylist_id: string

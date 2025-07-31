@@ -11,6 +11,7 @@ interface UserProfile {
   bio?: string
   specialties?: string[]
   catalog_urls?: string[]
+  profile_picture?: string
   clothing_preferences?: string[]
   preferred_occasions?: string[]
   style_preferences?: string
@@ -28,6 +29,7 @@ interface Stylist {
   bio: string
   specialties: string[]
   catalog_urls: string[]
+  profile_picture?: string
   created_at: string
   updated_at: string
 }
@@ -144,7 +146,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: userProfile.full_name,
         bio: userProfile.bio || `Professional stylist ${userProfile.full_name} ready to help you look your best!`,
         specialties: userProfile.specialties || ['Personal Styling', 'Fashion Consultation'],
-        catalog_urls: userProfile.catalog_urls || []
+        catalog_urls: userProfile.catalog_urls || [],
+        profile_picture: userProfile.profile_picture || null
       }
 
       console.log('Adding stylist to stylists table:', stylistData)
