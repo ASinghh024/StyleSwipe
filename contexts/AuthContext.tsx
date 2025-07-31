@@ -7,7 +7,7 @@ interface UserProfile {
   id: string
   user_id: string
   full_name: string
-  role: 'user' | 'stylist'
+  role: 'admin' | 'user' | 'stylist'
   bio?: string
   specialties?: string[]
   catalog_urls?: string[]
