@@ -209,29 +209,12 @@ export default function StylistDashboard() {
         </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div className="mb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="apple-card p-6"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-dark-card rounded-2xl flex items-center justify-center border border-dark-border">
-                <Users className="w-5 w-5 text-dark-text-secondary" />
-              </div>
-              <div>
-                <p className="text-sm text-dark-text-tertiary">Total Matches</p>
-                <p className="text-2xl font-semibold text-dark-text-primary">{stats.total}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="apple-card p-6"
+            className="apple-card p-6 max-w-md"
           >
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-dark-card rounded-2xl flex items-center justify-center border border-dark-border">
@@ -269,9 +252,9 @@ export default function StylistDashboard() {
           transition={{ delay: 0.5 }}
           className="apple-card"
         >
-          <div className="p-6 border-b border-dark-border">
-            <h2 className="text-xl font-semibold text-dark-text-primary mb-2">Your Matches</h2>
-            <p className="text-dark-text-secondary text-sm">Clients who want to work with you</p>
+          <div className="p-4 border-b border-dark-border">
+            <h2 className="text-lg font-semibold text-dark-text-primary mb-1">Your Matches</h2>
+            <p className="text-dark-text-secondary text-xs">Clients who want to work with you</p>
           </div>
 
           {loading ? (
@@ -303,22 +286,22 @@ export default function StylistDashboard() {
           ) : (
             <div className="divide-y divide-dark-border">
               {matchedUsers.map((match) => (
-                <div key={match.id} className="p-6">
+                <div key={match.id} className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       {/* User Name as Title */}
-                      <div className="flex items-center space-x-4 mb-6">
-                        <div className="w-12 h-12 bg-accent-blue/20 rounded-full flex items-center justify-center">
-                          <span className="text-lg font-semibold text-accent-blue">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-9 h-9 bg-accent-blue/20 rounded-full flex items-center justify-center">
+                          <span className="text-base font-semibold text-accent-blue">
                             {match.user_name?.charAt(0)?.toUpperCase() || 'U'}
                           </span>
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-dark-text-primary mb-1">
+                          <h3 className="text-base font-semibold text-dark-text-primary leading-tight">
                             {match.user_name}
                           </h3>
-                          <div className="flex items-center space-x-2 text-xs text-dark-text-tertiary">
-                            <Calendar className="w-3 h-3" />
+                          <div className="flex items-center space-x-1.5 text-[10px] text-dark-text-tertiary">
+                            <Calendar className="w-2.5 h-2.5" />
                             <span>Matched {new Date(match.matched_at).toLocaleDateString()}</span>
                           </div>
                         </div>
@@ -331,18 +314,18 @@ export default function StylistDashboard() {
                           (Array.isArray(val) ? val.length > 0 : true)
                         )
                       ) ? (
-                        <div className="bg-dark-card border border-dark-border rounded-2xl p-4 mb-6">
-                          <h4 className="font-medium text-dark-text-primary mb-4 flex items-center text-sm">
-                            <span className="w-2 h-2 bg-accent-blue rounded-full mr-2"></span>
+                        <div className="bg-dark-card border border-dark-border rounded-xl p-3 mb-4">
+                          <h4 className="font-medium text-dark-text-primary mb-2 flex items-center text-xs">
+                            <span className="w-1.5 h-1.5 bg-accent-blue rounded-full mr-1.5"></span>
                             Preferences
                           </h4>
                           
-                          <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-2 text-[10px]">
                             {/* Gender Tag */}
                             {match.styling_preferences.gender && (
-                              <div className="flex items-center space-x-3">
-                                <span className="text-xs text-dark-text-tertiary font-medium w-16">Gender</span>
-                                <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/30">
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-dark-text-tertiary font-medium w-12">Gender</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg font-medium bg-accent-blue/20 text-accent-blue border border-accent-blue/30">
                                   {match.styling_preferences.gender}
                                 </span>
                               </div>
@@ -350,9 +333,9 @@ export default function StylistDashboard() {
 
                             {/* Style Tag */}
                             {match.styling_preferences.style && (
-                              <div className="flex items-center space-x-3">
-                                <span className="text-xs text-dark-text-tertiary font-medium w-16">Style</span>
-                                <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-accent-green/20 text-accent-green border border-accent-green/30">
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-dark-text-tertiary font-medium w-12">Style</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg font-medium bg-accent-green/20 text-accent-green border border-accent-green/30">
                                   {match.styling_preferences.style}
                                 </span>
                               </div>
@@ -360,23 +343,25 @@ export default function StylistDashboard() {
 
                             {/* Budget Tag */}
                             {match.styling_preferences.budget && (
-                              <div className="flex items-center space-x-3">
-                                <span className="text-xs text-dark-text-tertiary font-medium w-16">Budget</span>
-                                <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-system-yellow/20 text-system-yellow border border-system-yellow/30">
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-dark-text-tertiary font-medium w-12">Budget</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg font-medium bg-system-yellow/20 text-system-yellow border border-system-yellow/30">
                                   ₹{match.styling_preferences.budget}
                                 </span>
                               </div>
                             )}
+                          </div>
 
+                          <div className="mt-2 space-y-1.5">
                             {/* Clothing Type Tags */}
                             {match.styling_preferences.clothing_type?.length > 0 && (
-                              <div className="flex items-start space-x-3">
-                                <span className="text-xs text-dark-text-tertiary font-medium w-16 mt-1">Clothing</span>
-                                <div className="flex flex-wrap gap-2">
+                              <div className="flex items-start space-x-1.5">
+                                <span className="text-[10px] text-dark-text-tertiary font-medium w-12 mt-0.5">Clothing</span>
+                                <div className="flex flex-wrap gap-1">
                                   {match.styling_preferences.clothing_type.map((clothing, index) => (
                                     <span 
                                       key={index} 
-                                      className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-dark-surface text-dark-text-secondary border border-dark-border"
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-dark-surface text-dark-text-secondary border border-dark-border"
                                     >
                                       {clothing}
                                     </span>
@@ -387,13 +372,13 @@ export default function StylistDashboard() {
 
                             {/* Occasion Tags */}
                             {match.styling_preferences.occasion?.length > 0 && (
-                              <div className="flex items-start space-x-3">
-                                <span className="text-xs text-dark-text-tertiary font-medium w-16 mt-1">Occasions</span>
-                                <div className="flex flex-wrap gap-2">
+                              <div className="flex items-start space-x-1.5">
+                                <span className="text-[10px] text-dark-text-tertiary font-medium w-12 mt-0.5">Occasions</span>
+                                <div className="flex flex-wrap gap-1">
                                   {match.styling_preferences.occasion.map((occasion, index) => (
                                     <span 
                                       key={index} 
-                                      className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-dark-surface text-dark-text-secondary border border-dark-border"
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-dark-surface text-dark-text-secondary border border-dark-border"
                                     >
                                       {occasion}
                                     </span>
@@ -404,12 +389,12 @@ export default function StylistDashboard() {
                           </div>
                         </div>
                       ) : (
-                        <div className="bg-system-orange/10 border border-system-orange/20 rounded-2xl p-4 mb-6">
-                          <h4 className="font-medium text-system-orange mb-2 flex items-center text-sm">
-                            <span className="w-2 h-2 bg-system-orange rounded-full mr-2"></span>
+                        <div className="bg-system-orange/10 border border-system-orange/20 rounded-xl p-2.5 mb-4">
+                          <h4 className="font-medium text-system-orange mb-1 flex items-center text-xs">
+                            <span className="w-1.5 h-1.5 bg-system-orange rounded-full mr-1.5"></span>
                             No Preferences Set
                           </h4>
-                          <p className="text-xs text-system-orange/80">
+                          <p className="text-[10px] text-system-orange/80">
                             Contact them to learn about their style needs.
                           </p>
                         </div>
@@ -417,9 +402,9 @@ export default function StylistDashboard() {
 
                       {/* Profile Status Indicator */}
                       {!match.user_profile?.full_name && (
-                        <div className="bg-system-orange/10 border border-system-orange/20 rounded-xl p-3 mb-4">
-                          <p className="text-xs text-system-orange flex items-center">
-                            <span className="w-2 h-2 bg-system-orange rounded-full mr-2"></span>
+                        <div className="bg-system-orange/10 border border-system-orange/20 rounded-lg p-2 mb-3">
+                          <p className="text-[10px] text-system-orange flex items-center">
+                            <span className="w-1.5 h-1.5 bg-system-orange rounded-full mr-1.5"></span>
                             Profile may be incomplete
                           </p>
                         </div>
@@ -427,7 +412,7 @@ export default function StylistDashboard() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="ml-6 flex flex-col space-y-3">
+                    <div className="ml-4 flex flex-col space-y-2">
                       <button 
                         onClick={() => openChat(
                           match.id,
@@ -435,14 +420,14 @@ export default function StylistDashboard() {
                           match.user_name,
                           'user'
                         )}
-                        className="apple-button-primary flex items-center space-x-2 text-sm"
+                        className="apple-button-primary flex items-center space-x-1.5 text-xs px-3 py-1.5"
                       >
-                        <MessageCircle className="w-4 h-4" />
+                        <MessageCircle className="w-3 h-3" />
                         <span>Chat</span>
                       </button>
                       
-                      <button className="apple-button-secondary flex items-center space-x-2 text-sm">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <button className="apple-button-secondary flex items-center space-x-1.5 text-xs px-3 py-1.5">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         <span>Profile</span>
@@ -467,4 +452,4 @@ export default function StylistDashboard() {
       />
     </div>
   )
-} 
+}
