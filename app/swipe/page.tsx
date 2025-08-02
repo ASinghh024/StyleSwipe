@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, PanInfo } from 'framer-motion'
-import { Heart, X, Loader2, ArrowLeft, AlertCircle, RotateCcw, CheckCircle, Lock, Image, MessageCircle } from 'lucide-react'
+import { Heart, X, Loader2, ArrowLeft, ArrowRight, AlertCircle, RotateCcw, CheckCircle, Lock, Image, MessageCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
@@ -26,6 +26,31 @@ interface Stylist {
   }>
 }
 
+// Helper function to get random images from the catalog
+const getRandomImages = <T extends { id: string; image_url: string }>(images: T[] | undefined, count: number): T[] => {
+  // If images is undefined or empty, return an empty array
+  if (!images || images.length === 0) {
+    return [];
+  }
+  
+  // If there are fewer images than requested, return all of them
+  if (images.length <= count) {
+    return images;
+  }
+  
+  // Create a copy of the array to avoid modifying the original
+  const shuffled = [...images];
+  
+  // Fisher-Yates shuffle algorithm
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  // Return the first 'count' images
+  return shuffled.slice(0, count);
+};
+
 export default function SwipePage() {
   const { user, session } = useAuth()
   const [stylists, setStylists] = useState<Stylist[]>([])
@@ -43,6 +68,7 @@ export default function SwipePage() {
   const [showMatch, setShowMatch] = useState(false)
   const [matchedStylist, setMatchedStylist] = useState<Stylist | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -247,9 +273,21 @@ export default function SwipePage() {
     setImageError(stylistId)
   }
 
+  // Handle image navigation
+  const navigateToImage = (direction: 'next' | 'prev', imageArray: any[]) => {
+    if (imageArray.length <= 1) return;
+    
+    if (direction === 'next') {
+      setCurrentImageIndex(prev => (prev + 1) % imageArray.length);
+    } else {
+      setCurrentImageIndex(prev => (prev - 1 + imageArray.length) % imageArray.length);
+    }
+  }
+
   // Reset image error when stylist changes
   useEffect(() => {
     setImageError(null)
+    setCurrentImageIndex(0)
   }, [currentIndex])
 
   const handleStartOver = async () => {
@@ -691,28 +729,174 @@ export default function SwipePage() {
               transformOrigin: "center center"
             }}
           >
-            {/* Image */}
+            {/* Image Carousel with Bubble Navigation */}
             <div className="relative h-96 bg-dark-card rounded-t-xl overflow-hidden">
               {currentStylist.catalog_images && currentStylist.catalog_images.length > 0 && imageError !== currentStylist.id ? (
                 <div className="w-full h-full relative">
-                  <img
-                    src={currentStylist.catalog_images[0].image_url}
-                    alt={currentStylist.name}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    onError={() => handleImageError(currentStylist.id)}
-                    onLoad={() => setImageError(null)}
-                  />
+                  {/* Current image display with transition */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`image-${currentImageIndex}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="w-full h-full"
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.2}
+                      onDragEnd={(e, info) => {
+                        // Only handle horizontal swipes for image navigation
+                        // Don't interfere with the card's own swipe behavior
+                        if (Math.abs(info.offset.x) > 50 && !isDragging) {
+                          const direction = info.offset.x > 0 ? 'prev' : 'next';
+                          const images = getRandomImages(currentStylist.catalog_images || [], 6);
+                          navigateToImage(direction, images);
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
+                      {getRandomImages(currentStylist.catalog_images || [], 6).length > 0 && (
+                        <img
+                          src={getRandomImages(currentStylist.catalog_images || [], 6)[currentImageIndex]?.image_url || ''}
+                          alt={`${currentStylist.name} - ${currentImageIndex + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          onError={() => handleImageError(currentStylist.id)}
+                          onLoad={() => setImageError(null)}
+                        />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                  
+                  {/* Bubble navigation - only show if multiple images */}
+                  {getRandomImages(currentStylist.catalog_images || [], 6).length > 1 && (
+                    <>
+                      {/* Left/Right Navigation Arrows */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const images = getRandomImages(currentStylist.catalog_images || [], 6);
+                          navigateToImage('prev', images);
+                        }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-all z-10"
+                        aria-label="Previous image"
+                      >
+                        <ArrowLeft size={16} />
+                      </button>
+                      
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const images = getRandomImages(currentStylist.catalog_images || [], 6);
+                          navigateToImage('next', images);
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-all z-10"
+                        aria-label="Next image"
+                      >
+                        <ArrowRight size={16} />
+                      </button>
+                      
+                      {/* Bubble Indicators */}
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2 z-10">
+                        {getRandomImages(currentStylist.catalog_images || [], 6).map((_, index) => (
+                          <button
+                            key={`bubble-${index}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentImageIndex(index);
+                            }}
+                            aria-label={`View image ${index + 1}`}
+                            className={`rounded-full transition-all duration-300 hover:scale-125 focus:outline-none focus:ring-2 focus:ring-accent-blue ${index === currentImageIndex ? 'bg-white w-3 h-3' : 'bg-white/30 w-2.5 h-2.5'}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                 </div>
               ) : currentStylist.catalog_urls && currentStylist.catalog_urls.length > 0 && imageError !== currentStylist.id ? (
                 <div className="w-full h-full relative">
-                  <img
-                    src={currentStylist.catalog_urls[0]}
-                    alt={currentStylist.name}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    onError={() => handleImageError(currentStylist.id)}
-                    onLoad={() => setImageError(null)}
-                  />
+                  {/* Current image display with transition */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`image-${currentImageIndex}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="w-full h-full"
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.2}
+                      onDragEnd={(e, info) => {
+                        // Only handle horizontal swipes for image navigation
+                        // Don't interfere with the card's own swipe behavior
+                        if (Math.abs(info.offset.x) > 50 && !isDragging) {
+                          const direction = info.offset.x > 0 ? 'prev' : 'next';
+                          const images = getRandomImages(currentStylist.catalog_urls?.map((url, idx) => ({ id: `url-${idx}`, image_url: url })) || [], 6);
+                          navigateToImage(direction, images);
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
+                      {getRandomImages(currentStylist.catalog_urls?.map((url, idx) => ({ id: `url-${idx}`, image_url: url })) || [], 6).length > 0 && (
+                        <img
+                          src={getRandomImages(currentStylist.catalog_urls?.map((url, idx) => ({ id: `url-${idx}`, image_url: url })) || [], 6)[currentImageIndex]?.image_url || ''}
+                          alt={`${currentStylist.name} - ${currentImageIndex + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          onError={() => handleImageError(currentStylist.id)}
+                          onLoad={() => setImageError(null)}
+                        />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                  
+                  {/* Bubble navigation - only show if multiple images */}
+                  {getRandomImages(currentStylist.catalog_urls?.map((url, idx) => ({ id: `url-${idx}`, image_url: url })) || [], 6).length > 1 && (
+                    <>
+                      {/* Left/Right Navigation Arrows */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const images = getRandomImages(currentStylist.catalog_urls?.map((url, idx) => ({ id: `url-${idx}`, image_url: url })) || [], 6);
+                          navigateToImage('prev', images);
+                        }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-all z-10"
+                        aria-label="Previous image"
+                      >
+                        <ArrowLeft size={16} />
+                      </button>
+                      
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const images = getRandomImages(currentStylist.catalog_urls?.map((url, idx) => ({ id: `url-${idx}`, image_url: url })) || [], 6);
+                          navigateToImage('next', images);
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-all z-10"
+                        aria-label="Next image"
+                      >
+                        <ArrowRight size={16} />
+                      </button>
+                      
+                      {/* Bubble Indicators */}
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2 z-10">
+                        {getRandomImages(currentStylist.catalog_urls?.map((url, idx) => ({ id: `url-${idx}`, image_url: url })) || [], 6).map((_, index) => (
+                          <button
+                            key={`bubble-${index}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentImageIndex(index);
+                            }}
+                            aria-label={`View image ${index + 1}`}
+                            className={`rounded-full transition-all duration-300 hover:scale-125 focus:outline-none focus:ring-2 focus:ring-accent-blue ${index === currentImageIndex ? 'bg-white w-3 h-3' : 'bg-white/30 w-2.5 h-2.5'}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                 </div>
               ) : (

@@ -105,11 +105,11 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-dark-surface/80 backdrop-blur-apple border-b border-dark-border/50">
+      <nav className="sticky top-0 z-50 bg-dark-surface/80 backdrop-blur-md border border-dark-border shadow-lg">
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Minimal Logo */}
-            <div className="flex items-center space-x-3">
+            {/* Logo */}
+            <div className="flex items-center">
               <Link href="/">
                 <div className="flex items-center space-x-3">
                   <Shirt className="h-6 w-6 text-accent-blue" />
@@ -120,67 +120,123 @@ export default function Navbar() {
               </Link>
             </div>
 
-            {/* Clean Navigation */}
-            <div className="flex items-center space-x-2">
-              {user ? (
-                <div className="flex items-center space-x-2">
-                  {/* Role-based navigation */}
+            {/* Navigation */}
+            <div className="hidden md:flex items-center">
+              {user && (
+                <div className="bg-dark-card/60 backdrop-blur-md rounded-full p-1 border border-dark-border/50 shadow-apple">
                   {userProfile?.role === 'admin' as any ? (
-                    <Link
-                      href="/admin/dashboard"
-                      className="apple-button-secondary flex items-center space-x-2 text-sm"
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      <span>Admin Dashboard</span>
-                    </Link>
+                    <div className="flex items-center space-x-1">
+                      <Link
+                        href="/admin/dashboard"
+                        className="flex items-center space-x-2 text-sm px-5 py-2 rounded-full hover:bg-accent-blue hover:text-dark-text-primary transition-all"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>Admin Dashboard</span>
+                      </Link>
+                    </div>
                   ) : userProfile?.role === 'stylist' ? (
-                    <>
+                    <div className="flex items-center space-x-1">
                       <Link
                         href="/stylist-dashboard"
-                        className="apple-button-secondary flex items-center space-x-2 text-sm"
+                        className="flex items-center space-x-2 text-sm px-5 py-2 rounded-full hover:bg-accent-blue hover:text-dark-text-primary transition-all"
                       >
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Dashboard</span>
                       </Link>
                       <Link
                         href={`/stylist/${user?.id}`}
-                        className="apple-button-secondary flex items-center space-x-2 text-sm"
+                        className="flex items-center space-x-2 text-sm px-5 py-2 rounded-full hover:bg-accent-blue hover:text-dark-text-primary transition-all"
                       >
                         <Camera className="h-4 w-4" />
                         <span>Your Catalog</span>
                       </Link>
-                    </>
+                    </div>
                   ) : (
-                    <>
+                    <div className="flex items-center space-x-1">
                       <Link
                         href="/swipe"
-                        className="apple-button-secondary flex items-center space-x-2 text-sm"
+                        className="flex items-center space-x-2 text-sm px-5 py-2 rounded-full hover:bg-accent-blue hover:text-dark-text-primary transition-all"
                       >
                         <Heart className="h-4 w-4" />
                         <span>Swipe</span>
                       </Link>
                       <Link
                         href="/matches"
-                        className="apple-button-secondary flex items-center space-x-2 text-sm"
+                        className="flex items-center space-x-2 text-sm px-5 py-2 rounded-full hover:bg-accent-blue hover:text-dark-text-primary transition-all"
                       >
                         <Users className="h-4 w-4" />
                         <span>Matches</span>
                       </Link>
                       <Link
                         href="/profile"
-                        className="apple-button-secondary flex items-center space-x-2 text-sm"
+                        className="flex items-center space-x-2 text-sm px-5 py-2 rounded-full hover:bg-accent-blue hover:text-dark-text-primary transition-all"
                       >
                         <User className="h-4 w-4" />
                         <span>Profile</span>
                       </Link>
-                    </>
+                    </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* User Controls */}
+            <div className="flex items-center space-x-2">
+              {user ? (
+                <div className="flex items-center space-x-3">
+                  {/* Mobile Navigation */}
+                  <div className="md:hidden flex items-center space-x-2">
+                    {userProfile?.role === 'admin' as any ? (
+                      <Link
+                        href="/admin/dashboard"
+                        className="bg-dark-card/60 backdrop-blur-md p-2 rounded-full border border-dark-border/50 shadow-apple"
+                      >
+                        <LayoutDashboard className="h-5 w-5 text-accent-blue" />
+                      </Link>
+                    ) : userProfile?.role === 'stylist' ? (
+                      <>
+                        <Link
+                          href="/stylist-dashboard"
+                          className="bg-dark-card/60 backdrop-blur-md p-2 rounded-full border border-dark-border/50 shadow-apple"
+                        >
+                          <LayoutDashboard className="h-5 w-5 text-accent-blue" />
+                        </Link>
+                        <Link
+                          href={`/stylist/${user?.id}`}
+                          className="bg-dark-card/60 backdrop-blur-md p-2 rounded-full border border-dark-border/50 shadow-apple"
+                        >
+                          <Camera className="h-5 w-5 text-accent-blue" />
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href="/swipe"
+                          className="bg-dark-card/60 backdrop-blur-md p-2 rounded-full border border-dark-border/50 shadow-apple"
+                        >
+                          <Heart className="h-5 w-5 text-accent-blue" />
+                        </Link>
+                        <Link
+                          href="/matches"
+                          className="bg-dark-card/60 backdrop-blur-md p-2 rounded-full border border-dark-border/50 shadow-apple"
+                        >
+                          <Users className="h-5 w-5 text-accent-blue" />
+                        </Link>
+                        <Link
+                          href="/profile"
+                          className="bg-dark-card/60 backdrop-blur-md p-2 rounded-full border border-dark-border/50 shadow-apple"
+                        >
+                          <User className="h-5 w-5 text-accent-blue" />
+                        </Link>
+                      </>
+                    )}
+                  </div>
                   
                   {/* User Profile */}
-                  <div className="flex items-center space-x-3 ml-4">
+                  <div className="flex items-center space-x-2">
                     <button
                       onClick={handleProfileClick}
-                      className="flex items-center space-x-2 hover:bg-dark-card/50 p-2 rounded-xl transition-colors"
+                      className="flex items-center space-x-2 bg-dark-card/60 backdrop-blur-md px-3 py-2 rounded-full border border-dark-border/50 shadow-apple hover:bg-dark-card/80 transition-all"
                     >
                       <div className="w-7 h-7 bg-dark-card rounded-full flex items-center justify-center overflow-hidden">
                         {userProfile?.role === 'stylist' && user?.id ? (
@@ -189,7 +245,7 @@ export default function Navbar() {
                           <User className="h-4 w-4 text-dark-text-secondary" />
                         )}
                       </div>
-                      <div className="text-left">
+                      <div className="text-left hidden sm:block">
                         <div className="text-sm font-medium text-dark-text-primary">
                           {userProfile?.full_name ? userProfile.full_name.split(' ')[0] : 'User'}
                         </div>
@@ -203,10 +259,10 @@ export default function Navbar() {
                     </button>
                     <button
                       onClick={handleSignOut}
-                      className="text-dark-text-tertiary hover:text-dark-text-secondary transition-colors p-2"
+                      className="bg-dark-card/60 backdrop-blur-md p-2 rounded-full border border-dark-border/50 shadow-apple hover:bg-dark-card/80 transition-all"
                       title="Sign Out"
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut className="h-4 w-4 text-dark-text-secondary" />
                     </button>
                   </div>
                 </div>
@@ -214,17 +270,17 @@ export default function Navbar() {
                 <div className="flex items-center space-x-3">
                   <Link
                     href="/stylist-landing"
-                    className="flex items-center space-x-2 text-dark-text-secondary hover:text-dark-text-primary font-medium transition-colors px-4 py-2"
+                    className="hidden sm:flex items-center space-x-2 bg-dark-card/60 backdrop-blur-md px-4 py-2 rounded-full border border-dark-border/50 shadow-apple hover:bg-dark-card/80 transition-all text-dark-text-secondary hover:text-dark-text-primary"
                   >
                     <Briefcase className="h-4 w-4" />
-                    <span>For Stylists</span>
+                    <span className="font-medium">For Stylists</span>
                   </Link>
                   <button
                     onClick={() => {
                       console.log('Login button clicked')
                       setShowLogin(true)
                     }}
-                    className="text-dark-text-secondary hover:text-dark-text-primary font-medium transition-colors px-4 py-2"
+                    className="bg-dark-card/60 backdrop-blur-md px-5 py-2 rounded-full border border-dark-border/50 shadow-apple hover:bg-dark-card/80 transition-all text-dark-text-secondary hover:text-dark-text-primary font-medium"
                   >
                     Login
                   </button>
@@ -233,7 +289,7 @@ export default function Navbar() {
                       console.log('Sign up button clicked')
                       setShowSignUp(true)
                     }}
-                    className="apple-button-primary text-sm"
+                    className="bg-accent-blue hover:bg-accent-blue-muted px-5 py-2 rounded-full shadow-apple transition-all text-dark-text-primary font-medium"
                   >
                     Sign Up
                   </button>

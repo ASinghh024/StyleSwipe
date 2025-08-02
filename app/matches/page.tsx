@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Heart, Calendar, User, ArrowLeft, RotateCcw, MessageCircle, TrendingUp } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Heart, Calendar, User, ArrowLeft, ArrowRight, RotateCcw, MessageCircle, TrendingUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import ChatModal from '../components/ChatModal'
@@ -19,6 +19,7 @@ interface Match {
     bio: string
     specialties: string[]
     catalog_urls: string[]
+    profile_picture?: string
     catalog_images?: Array<{
       id: string
       stylist_id: string
@@ -46,6 +47,7 @@ export default function MatchesPage() {
   const { user, userProfile } = useAuth()
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentImageIndices, setCurrentImageIndices] = useState<{[matchId: string]: number}>({})
   const [chatModal, setChatModal] = useState<{
     isOpen: boolean
     matchId: string
@@ -152,11 +154,26 @@ export default function MatchesPage() {
               return { ...match, stylist: { ...match.stylist, catalog_images: [] } }
             }
 
+            // Fetch profile picture if not already included
+            let profilePicture = match.stylist.profile_picture;
+            if (!profilePicture) {
+              const { data: stylistData, error: stylistError } = await supabase
+                .from('stylists')
+                .select('profile_picture')
+                .eq('id', match.stylist.id)
+                .single();
+              
+              if (!stylistError && stylistData) {
+                profilePicture = stylistData.profile_picture;
+              }
+            }
+
             return { 
               ...match, 
               stylist: { 
                 ...match.stylist, 
-                catalog_images: catalogImages || [] 
+                catalog_images: catalogImages || [],
+                profile_picture: profilePicture
               } 
             }
           })
@@ -322,49 +339,134 @@ export default function MatchesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className={`apple-card overflow-hidden hover:shadow-apple-lg transition-all ${!isStylist ? 'cursor-pointer hover:scale-[1.02] hover:border-accent-blue/30' : ''}`}
+                className={`apple-card overflow-hidden hover:shadow-apple-lg transition-all flex flex-col ${!isStylist ? 'cursor-pointer hover:scale-[1.02] hover:border-accent-blue/30' : ''}`}
                 onClick={() => {
                   if (!isStylist) {
                     window.location.href = `/stylist/${match.stylist_id}`;
                   }
                 }}
               >
-                {/* Image */}
-                <div className="relative h-48 bg-dark-card">
+                {/* Image with Navigation */}
+                <div className="relative h-80 bg-dark-card flex-grow">
                   {isStylist ? (
                     // Stylist view - show user icon
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center bg-dark-surface/50">
                       <div className="text-center">
-                        <div className="w-16 h-16 bg-dark-surface rounded-full flex items-center justify-center mx-auto mb-3 border border-dark-border">
-                          <User className="w-6 h-6 text-dark-text-tertiary" />
+                        <div className="w-20 h-20 bg-dark-surface rounded-full flex items-center justify-center mx-auto mb-4 border border-dark-border">
+                          <User className="w-8 h-8 text-dark-text-tertiary" />
                         </div>
-                        <p className="text-sm text-dark-text-secondary">Client</p>
+                        <p className="text-base text-dark-text-secondary font-medium">Client Profile</p>
                       </div>
                     </div>
                   ) : (
-                    // User view - show stylist images
-                    match.stylist?.catalog_images && match.stylist.catalog_images.length > 0 ? (
-                      <img
-                        src={match.stylist.catalog_images[0].image_url}
-                        alt={match.stylist.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : match.stylist?.catalog_urls && match.stylist.catalog_urls.length > 0 ? (
-                      <img
-                        src={match.stylist.catalog_urls[0]}
-                        alt={match.stylist.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-dark-surface rounded-full flex items-center justify-center mx-auto mb-3 border border-dark-border">
-                            <User className="w-6 h-6 text-dark-text-tertiary" />
+                    // User view - show stylist images with navigation
+                    <div className="w-full h-full relative">
+                      {/* Current image display with transition */}
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={`image-${match.id}-${currentImageIndices[match.id] || 0}`}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="w-full h-full"
+                        >
+                          {/* Show profile picture as first image if available */}
+                          {(currentImageIndices[match.id] || 0) === 0 && match.stylist?.profile_picture ? (
+                            <img
+                              src={match.stylist.profile_picture}
+                              alt={match.stylist.name}
+                              className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                            />
+                          ) : match.stylist?.catalog_images && match.stylist.catalog_images.length > 0 ? (
+                            <img
+                              src={match.stylist.catalog_images[(currentImageIndices[match.id] || 0) - (match.stylist.profile_picture ? 1 : 0)]?.image_url || ''}
+                              alt={`${match.stylist.name} - ${(currentImageIndices[match.id] || 0) + 1}`}
+                              className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                            />
+                          ) : match.stylist?.catalog_urls && match.stylist.catalog_urls.length > 0 ? (
+                            <img
+                              src={match.stylist.catalog_urls[(currentImageIndices[match.id] || 0) - (match.stylist.profile_picture ? 1 : 0)] || ''}
+                              alt={`${match.stylist.name} - ${(currentImageIndices[match.id] || 0) + 1}`}
+                              className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-dark-surface/50">
+                              <div className="text-center">
+                                <div className="w-20 h-20 bg-dark-surface rounded-full flex items-center justify-center mx-auto mb-4 border border-dark-border">
+                                  <User className="w-8 h-8 text-dark-text-tertiary" />
+                                </div>
+                                <p className="text-sm text-dark-text-secondary">No image available</p>
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      </AnimatePresence>
+                      
+                      {/* Bubble navigation - only show if multiple images */}
+                      {((match.stylist?.profile_picture ? 1 : 0) + 
+                        (match.stylist?.catalog_images?.length || 0) + 
+                        (match.stylist?.catalog_urls?.length || 0)) > 1 && (
+                        <>
+                          {/* Left/Right Navigation Arrows */}
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const totalImages = (match.stylist?.profile_picture ? 1 : 0) + 
+                                (match.stylist?.catalog_images?.length || 0) + 
+                                (match.stylist?.catalog_urls?.length || 0);
+                              setCurrentImageIndices(prev => ({
+                                ...prev,
+                                [match.id]: ((prev[match.id] || 0) - 1 + totalImages) % totalImages
+                              }));
+                            }}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-all z-10"
+                            aria-label="Previous image"
+                          >
+                            <ArrowLeft size={18} />
+                          </button>
+                          
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const totalImages = (match.stylist?.profile_picture ? 1 : 0) + 
+                                (match.stylist?.catalog_images?.length || 0) + 
+                                (match.stylist?.catalog_urls?.length || 0);
+                              setCurrentImageIndices(prev => ({
+                                ...prev,
+                                [match.id]: ((prev[match.id] || 0) + 1) % totalImages
+                              }));
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-all z-10"
+                            aria-label="Next image"
+                          >
+                            <ArrowRight size={18} />
+                          </button>
+                          
+                          {/* Bubble Indicators */}
+                          <div className="absolute bottom-5 left-0 right-0 flex justify-center space-x-2.5 z-10">
+                            {Array.from({ length: (match.stylist?.profile_picture ? 1 : 0) + 
+                              (match.stylist?.catalog_images?.length || 0) + 
+                              (match.stylist?.catalog_urls?.length || 0) }).map((_, index) => (
+                              <button
+                                key={`bubble-${match.id}-${index}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentImageIndices(prev => ({
+                                    ...prev,
+                                    [match.id]: index
+                                  }));
+                                }}
+                                aria-label={`View image ${index + 1}`}
+                                className={`rounded-full transition-all duration-300 hover:scale-125 focus:outline-none focus:ring-2 focus:ring-accent-blue ${index === (currentImageIndices[match.id] || 0) ? 'bg-white w-3.5 h-3.5' : 'bg-white/40 w-3 h-3'}`}
+                              />
+                            ))}
                           </div>
-                          <p className="text-sm text-dark-text-secondary">No image</p>
-                        </div>
-                      </div>
-                    )
+                        </>
+                      )}
+                      
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+                    </div>
                   )}
                   <div className="absolute top-3 right-3 bg-accent-green/90 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-medium">
                     {isStylist ? 'Match' : 'Matched'}
@@ -372,57 +474,60 @@ export default function MatchesPage() {
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-2 flex-shrink-0 max-h-[calc(33%-1rem)] overflow-y-auto">
                   {isStylist ? (
                     // Stylist view - show user information
                     <>
-                      <h3 className="text-lg font-semibold text-dark-text-primary">
-                        {match.user_profile?.full_name || 'Anonymous User'}
-                      </h3>
-                      
-                      <p className="text-dark-text-secondary text-sm">
-                        Your potential client
-                      </p>
+                      <div>
+                        <h3 className="text-lg font-semibold text-dark-text-primary">
+                          {match.user_profile?.full_name || 'Anonymous User'}
+                        </h3>
+                        <p className="text-dark-text-secondary text-xs">
+                          Your potential client
+                        </p>
+                      </div>
 
                       {/* User Preferences */}
                       {match.user_preferences && (
-                        <div className="space-y-3">
-                          {match.user_preferences.gender && (
-                            <div>
-                              <h4 className="text-xs font-medium text-dark-text-tertiary mb-1">Gender</h4>
-                              <p className="text-sm text-dark-text-primary">{match.user_preferences.gender}</p>
-                            </div>
-                          )}
-                          
-                          {match.user_preferences.style_preferences && (
-                            <div>
-                              <h4 className="text-xs font-medium text-dark-text-tertiary mb-1">Style</h4>
-                              <p className="text-sm text-dark-text-primary">{match.user_preferences.style_preferences}</p>
-                            </div>
-                          )}
-                          
-                          {match.user_preferences.budget_range && (
-                            <div>
-                              <h4 className="text-xs font-medium text-dark-text-tertiary mb-1">Budget</h4>
-                              <p className="text-sm text-dark-text-primary">{match.user_preferences.budget_range}</p>
-                            </div>
-                          )}
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            {match.user_preferences.gender && (
+                              <div>
+                                <h4 className="text-xs font-medium text-dark-text-tertiary mb-0.5">Gender</h4>
+                                <p className="text-xs text-dark-text-primary">{match.user_preferences.gender}</p>
+                              </div>
+                            )}
+                            
+                            {match.user_preferences.style_preferences && (
+                              <div>
+                                <h4 className="text-xs font-medium text-dark-text-tertiary mb-0.5">Style</h4>
+                                <p className="text-xs text-dark-text-primary">{match.user_preferences.style_preferences}</p>
+                              </div>
+                            )}
+                            
+                            {match.user_preferences.budget_range && (
+                              <div>
+                                <h4 className="text-xs font-medium text-dark-text-tertiary mb-0.5">Budget</h4>
+                                <p className="text-xs text-dark-text-primary">{match.user_preferences.budget_range}</p>
+                              </div>
+                            )}
+                          </div>
                           
                           {match.user_preferences.clothing_preferences && match.user_preferences.clothing_preferences.length > 0 && (
                             <div>
-                              <h4 className="text-xs font-medium text-dark-text-tertiary mb-2">Clothing</h4>
-                              <div className="flex flex-wrap gap-2">
+                              <h4 className="text-xs font-medium text-dark-text-tertiary mb-1">Clothing</h4>
+                              <div className="flex flex-wrap gap-1.5">
                                 {match.user_preferences.clothing_preferences.slice(0, 3).map((pref, idx) => (
                                   <span
                                     key={idx}
-                                    className="px-2 py-1 bg-accent-blue/20 text-accent-blue text-xs rounded-lg font-medium border border-accent-blue/30"
+                                    className="px-1.5 py-0.5 bg-accent-blue/20 text-accent-blue text-xs rounded-md font-medium border border-accent-blue/30"
                                   >
                                     {pref}
                                   </span>
                                 ))}
                                 {match.user_preferences.clothing_preferences.length > 3 && (
-                                  <span className="px-2 py-1 bg-dark-surface text-dark-text-tertiary text-xs rounded-lg border border-dark-border">
-                                    +{match.user_preferences.clothing_preferences.length - 3} more
+                                  <span className="px-1.5 py-0.5 bg-dark-surface text-dark-text-tertiary text-xs rounded-md border border-dark-border">
+                                    +{match.user_preferences.clothing_preferences.length - 3}
                                   </span>
                                 )}
                               </div>
@@ -434,30 +539,31 @@ export default function MatchesPage() {
                   ) : (
                     // User view - show stylist information
                     <>
-                      <h3 className="text-lg font-semibold text-dark-text-primary">
-                        {match.stylist?.name}
-                      </h3>
-                      
-                      <p className="text-dark-text-secondary text-sm leading-relaxed">
-                        {match.stylist?.bio}
-                      </p>
+                      <div>
+                        <h3 className="text-lg font-semibold text-dark-text-primary">
+                          {match.stylist?.name}
+                        </h3>
+                        <p className="text-dark-text-secondary text-xs line-clamp-2">
+                          {match.stylist?.bio}
+                        </p>
+                      </div>
 
                       {/* Specialties */}
                       {match.stylist?.specialties && match.stylist.specialties.length > 0 && (
                         <div>
-                          <h4 className="text-xs font-medium text-dark-text-tertiary mb-2">Specialties</h4>
-                          <div className="flex flex-wrap gap-2">
+                          <h4 className="text-xs font-medium text-dark-text-tertiary mb-1">Specialties</h4>
+                          <div className="flex flex-wrap gap-1.5">
                             {match.stylist.specialties.slice(0, 3).map((specialty, idx) => (
                               <span
                                 key={idx}
-                                className="px-2 py-1 bg-accent-green/20 text-accent-green text-xs rounded-lg font-medium border border-accent-green/30"
+                                className="px-1.5 py-0.5 bg-accent-green/20 text-accent-green text-xs rounded-md font-medium border border-accent-green/30"
                               >
                                 {specialty}
                               </span>
                             ))}
                             {match.stylist.specialties.length > 3 && (
-                              <span className="px-2 py-1 bg-dark-surface text-dark-text-tertiary text-xs rounded-lg border border-dark-border">
-                                +{match.stylist.specialties.length - 3} more
+                              <span className="px-1.5 py-0.5 bg-dark-surface text-dark-text-tertiary text-xs rounded-md border border-dark-border">
+                                +{match.stylist.specialties.length - 3}
                               </span>
                             )}
                           </div>
@@ -466,47 +572,35 @@ export default function MatchesPage() {
                     </>
                   )}
 
-                  {/* Match Date */}
-                  <div className="flex items-center text-xs text-dark-text-tertiary">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    <span>
-                      Matched {new Date(match.matched_at).toLocaleDateString()}
-                    </span>
-                  </div>
+                  {/* Match Date and Actions */}
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center text-dark-text-tertiary">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      <span>
+                        {new Date(match.matched_at).toLocaleDateString()}
+                      </span>
+                    </div>
 
-                  {/* Action Buttons */}  
-                  <div className="mt-4 space-y-2">
                     {isStylist ? (
                       <button 
-                        onClick={() => openChat(
-                          match.id,
-                          match.user_id,
-                          match.user_profile?.full_name || 'User',
-                          'user'
-                        )}
-                        className="apple-button-primary w-full flex items-center justify-center space-x-2 text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openChat(
+                            match.id,
+                            match.user_id,
+                            match.user_profile?.full_name || 'User',
+                            'user'
+                          );
+                        }}
+                        className="px-2 py-1 bg-accent-blue text-white rounded-md text-xs font-medium flex items-center space-x-1 hover:bg-accent-blue/90 transition-colors"
                       >
-                        <MessageCircle className="w-4 h-4" />
-                        <span>Contact Client</span>
+                        <MessageCircle className="w-3 h-3" />
+                        <span>Message</span>
                       </button>
                     ) : (
-                      <>
-                        <button 
-                          onClick={() => openChat(
-                            match.id,
-                            match.stylist_id,
-                            match.stylist?.name || 'Stylist',
-                            'stylist'
-                          )}
-                          className="apple-button-primary w-full flex items-center justify-center space-x-2 text-sm"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                          <span>Contact Stylist</span>
-                        </button>
-                        <div className="text-center text-xs text-dark-text-tertiary">
-                          Click on card to view stylist catalog
-                        </div>
-                      </>
+                      <div className="text-dark-text-tertiary text-xs italic">
+                        Tap to view catalog
+                      </div>
                     )}
                   </div>
                 </div>
